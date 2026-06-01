@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+3ISA_Pokemon_Day/
