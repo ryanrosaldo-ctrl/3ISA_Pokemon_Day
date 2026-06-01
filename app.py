@@ -809,13 +809,20 @@ st.markdown("""
         font-weight: 500 !important;
     }
 
-    /* Enforce dark text inside the light sidebar for legibility */
+    /* Premium dark cyber-stadium sidebar background */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f1330 0%, #070914 100%) !important;
+        border-right: 2px solid rgba(59, 76, 202, 0.4) !important;
+        box-shadow: 5px 0 15px rgba(0,0,0,0.5) !important;
+    }
+    
+    /* Make sidebar text elements bright and clear on dark background */
     [data-testid="stSidebar"] p, 
     [data-testid="stSidebar"] span, 
     [data-testid="stSidebar"] li, 
     [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
-        color: #111638 !important;
+        color: #cbd5e1 !important;
         text-shadow: none !important;
     }
     
