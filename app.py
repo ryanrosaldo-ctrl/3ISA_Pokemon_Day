@@ -740,10 +740,34 @@ if page == "🏟️ Team Engine":
             if removed > 0:
                 st.info(f"🔒 **Restriction filter applied:** {removed} restricted Pokémon were excluded from the {region} pool.")
 
-            # Display team
-            st.subheader("Generated Gym Leader Team")
-            display_cols = ["name","native_region","type_1","type_2","role","hp","attack","defense","special_attack","special_defense","speed","total","reason"]
-            st.dataframe(team[display_cols].reset_index(drop=True), use_container_width=True)
+            # Display team as Pokémon cards
+            st.subheader("🏟️ Team Grid View")
+            cols = st.columns(3)
+            for idx, row in team.reset_index(drop=True).iterrows():
+                col = cols[idx % 3]
+                t2_html = f'<span class="badge badge-{row["native_region"].lower()}" style="margin-left: 5px;">{row["type_2"]}</span>' if row["type_2"] else ''
+                col.markdown(f"""
+                <div style="background: rgba(21, 27, 61, 0.7); border: 1px solid rgba(59, 76, 202, 0.5); border-top: 5px solid #FF1C1C; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: center;">
+                    <h4 style="color: #FFCB05; margin: 0; font-family: 'Orbitron', sans-serif; font-size: 1.3rem;">{row['name']}</h4>
+                    <p style="margin: 5px 0 10px; font-size: 0.8rem; color: #a5b4fc; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">{row['role']}</p>
+                    <div style="margin-bottom: 10px;">
+                        <span class="badge badge-{row["native_region"].lower()}">{row["type_1"]}</span>{t2_html}
+                    </div>
+                    <div style="font-size: 0.85rem; text-align: left; background: rgba(8, 10, 24, 0.4); padding: 8px; border-radius: 8px; color: #cbd5e1; border: 1px solid rgba(59, 76, 202, 0.2);">
+                        <div style="display: flex; justify-content: space-between;"><span>HP: <b>{row['hp']}</b></span><span>ATK: <b>{row['attack']}</b></span></div>
+                        <div style="display: flex; justify-content: space-between;"><span>DEF: <b>{row['defense']}</b></span><span>SPA: <b>{row['special_attack']}</b></span></div>
+                        <div style="display: flex; justify-content: space-between;"><span>SPD: <b>{row['special_defense']}</b></span><span>SPE: <b>{row['speed']}</b></span></div>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; font-weight: bold; color: #FFCB05; display: flex; justify-content: space-between;">
+                            <span>BST:</span><span>{row['total']}</span>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.75rem; color: #94a3b8; font-style: italic; margin-top: 8px; margin-bottom: 0px; text-align: left; line-height: 1.2;">{row['reason']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with st.expander("📊 View Raw Data Table"):
+                display_cols = ["name","native_region","type_1","type_2","role","hp","attack","defense","special_attack","special_defense","speed","total","reason"]
+                st.dataframe(team[display_cols].reset_index(drop=True), use_container_width=True)
 
             # Radar chart
             st.subheader("📊 Team Stat Profile")
@@ -871,9 +895,36 @@ elif page == "⚔️ Challenger Selection":
                 st.subheader("🔵 Recommended Challenger Team")
                 st.dataframe(result[["name","native_region","type_1","type_2","role","counter_score","advantage_details"]].reset_index(drop=True), use_container_width=True)
 
-            # Full stats
-            st.subheader("Full Challenger Stats")
-            st.dataframe(result.reset_index(drop=True), use_container_width=True)
+            # Display challenger team as cards
+            st.subheader("⚔️ Recommended Counter Lineup")
+            cols = st.columns(3)
+            for idx, row in result.reset_index(drop=True).iterrows():
+                col = cols[idx % 3]
+                t2_html = f'<span class="badge badge-{row["native_region"].lower()}" style="margin-left: 5px;">{row["type_2"]}</span>' if row["type_2"] else ''
+                col.markdown(f"""
+                <div style="background: rgba(21, 27, 61, 0.7); border: 1px solid rgba(59, 76, 202, 0.5); border-top: 5px solid #FFCB05; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: center;">
+                    <h4 style="color: #FFCB05; margin: 0; font-family: 'Orbitron', sans-serif; font-size: 1.3rem;">{row['name']}</h4>
+                    <p style="margin: 5px 0 10px; font-size: 0.8rem; color: #a5b4fc; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">{row['role']}</p>
+                    <div style="margin-bottom: 10px;">
+                        <span class="badge badge-{row["native_region"].lower()}">{row["type_1"]}</span>{t2_html}
+                    </div>
+                    <div style="font-size: 0.85rem; text-align: left; background: rgba(8, 10, 24, 0.4); padding: 8px; border-radius: 8px; color: #cbd5e1; border: 1px solid rgba(59, 76, 202, 0.2); margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;"><span>HP: <b>{row['hp']}</b></span><span>ATK: <b>{row['attack']}</b></span></div>
+                        <div style="display: flex; justify-content: space-between;"><span>DEF: <b>{row['defense']}</b></span><span>SPA: <b>{row['special_attack']}</b></span></div>
+                        <div style="display: flex; justify-content: space-between;"><span>SPD: <b>{row['special_defense']}</b></span><span>SPE: <b>{row['speed']}</b></span></div>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; font-weight: bold; color: #FFCB05; display: flex; justify-content: space-between;">
+                            <span>BST:</span><span>{row['total']}</span>
+                        </div>
+                    </div>
+                    <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); padding: 5px; border-radius: 6px; margin-bottom: 5px;">
+                        <span style="font-size: 0.8rem; color: #22c55e; font-weight: bold;">Counter Score: {row['counter_score']}</span>
+                    </div>
+                    <p style="font-size: 0.75rem; color: #94a3b8; font-style: italic; margin-top: 5px; margin-bottom: 0px; text-align: left; line-height: 1.2;"><b>Advantage:</b> {row['advantage_details']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with st.expander("📊 View Raw Data Table"):
+                st.dataframe(result.reset_index(drop=True), use_container_width=True)
 
             # Counter score bar chart
             fig = px.bar(result, x="name", y="counter_score",
@@ -985,10 +1036,21 @@ elif page == "🔮 Battle Prediction":
                 # Display result
                 winner_color = "#4caf50" if pred["predicted_winner"] == challenger_pred else "#f44336"
                 st.markdown(f"""
-                <div style="background:linear-gradient(135deg,#1a2a1a,#2a3a2a);border:2px solid {winner_color};border-radius:12px;padding:2rem;text-align:center;margin:1rem 0">
-                    <h2 style="color:{winner_color};margin:0;font-size:2rem">🏆 {pred['predicted_winner']}</h2>
-                    <p style="color:white;font-size:1.2rem;margin:0.5rem 0">Predicted Winner</p>
-                    <p style="color:#4fc3f7;font-size:1.5rem;margin:0">Confidence: {pred['confidence_score']*100:.0f}%</p>
+                <div style="background: linear-gradient(135deg, #101530 0%, #1c234a 100%); border: 2px solid {winner_color}; border-top: 5px solid {winner_color}; border-radius: 16px; padding: 2rem; text-align: center; margin: 1.5rem 0; box-shadow: 0 8px 30px rgba(0,0,0,0.4);">
+                    <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 15px;">
+                        <svg viewBox="0 0 100 100" width="50" height="50" style="filter: drop-shadow(0px 0px 8px {winner_color});">
+                            <circle cx="50" cy="50" r="45" fill="white" stroke="#1d2c5e" stroke-width="6"/>
+                            <path d="M 5,50 A 45,45 0 0,1 95,50 Z" fill="#FF1C1C" stroke="#1d2c5e" stroke-width="6"/>
+                            <line x1="5" y1="50" x2="95" y2="50" stroke="#1d2c5e" stroke-width="8"/>
+                            <circle cx="50" cy="50" r="16" fill="white" stroke="#1d2c5e" stroke-width="6"/>
+                            <circle cx="50" cy="50" r="6" fill="#1d2c5e" stroke-width="0"/>
+                        </svg>
+                    </div>
+                    <p style="color:#a5b4fc; font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin: 5px 0;">Predicted Winner</p>
+                    <h2 style="color: {winner_color}; font-family: 'Orbitron', sans-serif; font-size: 2.5rem; font-weight: 900; margin: 10px 0; text-shadow: 0 0 15px rgba(255,203,5,0.2);">🏆 {pred['predicted_winner']}</h2>
+                    <div style="display: inline-block; background: rgba(255,255,255,0.05); padding: 6px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); margin-top: 10px;">
+                        <span style="color: #FFCB05; font-family: 'Orbitron', sans-serif; font-size: 1.2rem; font-weight: bold; letter-spacing: 1px;">CONFIDENCE: {pred['confidence_score']*100:.0f}%</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
 
