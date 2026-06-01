@@ -14,6 +14,9 @@ from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, r
 import warnings
 warnings.filterwarnings("ignore")
 
+# Import image handler
+from pokemon_image_handler import get_pokemon_image_html, preload_team_images
+
 # ─────────────────────────────────────────
 #  CONFIG
 # ─────────────────────────────────────────
@@ -331,7 +334,7 @@ def run_team_engine(region, type_spec, model="KNN + Rule-Based Scoring"):
         reasons.append(r)
     team_df["reason"] = reasons
 
-    return team_df[["name","native_region","type_1","type_2","role","hp","attack","defense",
+    return team_df[["id","name","native_region","type_1","type_2","role","hp","attack","defense",
                      "special_attack","special_defense","speed","total","reason"]]
 
 # ─────────────────────────────────────────
@@ -474,7 +477,7 @@ def run_challenger_engine(gym_team_df, challenger_region, model="Counter Scoring
             team.append(row)
 
     result = pd.DataFrame(team[:6])
-    return result[["name","native_region","type_1","type_2","role","hp","attack","defense",
+    return result[["id","name","native_region","type_1","type_2","role","hp","attack","defense",
                     "special_attack","special_defense","speed","total","counter_score","advantage_details"]]
 
 # ─────────────────────────────────────────
@@ -865,45 +868,182 @@ st.markdown("""
 #  SIDEBAR NAV
 # ─────────────────────────────────────────
 with st.sidebar:
-    if os.path.exists("pokemon_logo.png"):
-        st.image("pokemon_logo.png", width="stretch")
-    else:
-        st.markdown("""
-        <div style="text-align:center; margin-bottom:15px; margin-top:10px;">
-            <svg viewBox="0 0 100 100" width="55" height="55" style="filter: drop-shadow(0px 0px 6px rgba(255, 203, 5, 0.5));">
-                <circle cx="50" cy="50" r="45" fill="white" stroke="#1d2c5e" stroke-width="6"/>
-                <path d="M 5,50 A 45,45 0 0,1 95,50 Z" fill="#FF1C1C" stroke="#1d2c5e" stroke-width="6"/>
-                <line x1="5" y1="50" x2="95" y2="50" stroke="#1d2c5e" stroke-width="8"/>
-                <circle cx="50" cy="50" r="16" fill="white" stroke="#1d2c5e" stroke-width="6"/>
-                <circle cx="50" cy="50" r="6" fill="#1d2c5e" stroke-width="0"/>
-            </svg>
-            <h2 style='color:#ffcb05;text-shadow: 2px 2px #3b4cca;font-family:sans-serif;margin-top:10px;margin-bottom:0px;font-size:1.5rem;'>POKÉMON DAY II</h2>
-            <p style='font-size:0.8rem;color:#a5b4fc;margin-top:2px;font-weight:700;text-transform:uppercase;'>3ISA System · Ahdaddee Gym</p>
+    # Logo and Title
+    st.markdown("""
+    <div style="text-align:center; margin-bottom:12px; margin-top:0px;">
+        <svg viewBox="0 0 100 100" width="55" height="55" style="filter: drop-shadow(0px 0px 10px rgba(255, 203, 5, 0.7));">
+            <circle cx="50" cy="50" r="45" fill="white" stroke="#1d2c5e" stroke-width="6"/>
+            <path d="M 5,50 A 45,45 0 0,1 95,50 Z" fill="#FF1C1C" stroke="#1d2c5e" stroke-width="6"/>
+            <line x1="5" y1="50" x2="95" y2="50" stroke="#1d2c5e" stroke-width="8"/>
+            <circle cx="50" cy="50" r="16" fill="white" stroke="#1d2c5e" stroke-width="6"/>
+            <circle cx="50" cy="50" r="6" fill="#1d2c5e" stroke-width="0"/>
+        </svg>
+        <h2 style='color:#ffcb05;text-shadow: 0 0 10px rgba(255, 203, 5, 0.5);font-family:"Orbitron", sans-serif;margin-top:6px;margin-bottom:0px;font-size:1.4rem;font-weight:900;letter-spacing:2px;'>POKÉMON DAY II</h2>
+        <p style='font-size:0.75rem;color:#a5b4fc;margin-top:2px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>3ISA Battle Engine</p>
+        <div style="background: rgba(255, 203, 5, 0.1); border: 1px solid rgba(255, 203, 5, 0.3); border-radius: 8px; padding: 3px 8px; margin-top: 6px; display: inline-block;">
+            <span style="color: #FFCB05; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.3px;">🛡️ AHDADDEE GYM 🛡️</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="laser-line"></div>', unsafe_allow_html=True)
+    
+    # Navigation Menu with Clickable Cards
+    st.markdown("""
+    <div style="margin-bottom: 12px;">
+        <p style="color: #FFCB05; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 8px 0;">⚙️ Main Engines</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Initialize session state for page
+    if "current_page" not in st.session_state:
+        st.session_state.current_page = "team_engine"
+    
+    # Create clickable navigation buttons
+    nav_options = [
+        ("team_engine", "🏟️ Team Engine", "Generate Gym Leader teams"),
+        ("challenger", "⚔️ Challenger Selection", "Build counter teams"),
+        ("prediction", "🔮 Battle Prediction", "Predict battle outcomes"),
+    ]
+    
+    for key, title, desc in nav_options:
+        if st.button(f"{title}\n{desc}", key=f"nav_{key}", use_container_width=True):
+            st.session_state.current_page = key
+            st.rerun()
+    
+    st.markdown("""
+    <style>
+    [data-testid="stSidebar"] button {
+        background: rgba(21, 27, 61, 0.6) !important;
+        border: 1px solid rgba(59, 76, 202, 0.4) !important;
+        border-radius: 12px !important;
+        padding: 10px !important;
+        margin-bottom: 6px !important;
+        color: #cbd5e1 !important;
+        font-weight: 600 !important;
+        font-size: 0.8rem !important;
+        transition: all 0.3s ease !important;
+        text-align: left !important;
+        line-height: 1.2 !important;
+    }
+    [data-testid="stSidebar"] button:hover {
+        background: rgba(59, 76, 202, 0.3) !important;
+        border-color: #FFCB05 !important;
+        box-shadow: 0 0 12px rgba(255, 203, 5, 0.2) !important;
+        transform: translateX(4px) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="laser-line"></div>', unsafe_allow_html=True)
+    
+    # Advanced Tools Section
+    st.markdown("""
+    <div style="margin-bottom: 12px;">
+        <p style="color: #FFCB05; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 8px 0;">🔧 Advanced Tools</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button("📊 Analytics", use_container_width=True, key="nav_analytics"):
+        st.session_state.current_page = "analytics"
+        st.rerun()
+    
+    if st.button("🗄️ Database", use_container_width=True, key="nav_database"):
+        st.session_state.current_page = "database"
+        st.rerun()
+    
+    st.markdown('<div class="laser-line"></div>', unsafe_allow_html=True)
+    
+    # Stats Section
+    st.markdown("""
+    <div style="margin-bottom: 10px; margin-top: 0px;">
+        <p style="color: #FFCB05; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 8px 0;">📊 Database Stats</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    df_all = load_pokemon()
+    
+    # Stats cards
+    stat_cols = st.columns(2)
+    with stat_cols[0]:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(255, 107, 107, 0.05)); border: 1px solid rgba(255, 107, 107, 0.3); border-radius: 10px; padding: 8px; text-align: center; min-height: 70px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <p style="color: #FF6B6B; font-size: 1.3rem; font-weight: 900; margin: 0;">{len(df_all)}</p>
+            <p style="color: #a5b4fc; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; margin: 2px 0 0 0;">Total Pokémon</p>
         </div>
         """, unsafe_allow_html=True)
-    st.markdown('<div class="laser-line"></div>', unsafe_allow_html=True)
-    page = st.radio("Navigation", [
-        "🏟️ Team Engine",
-        "⚔️ Challenger Selection",
-        "🔮 Battle Prediction",
-        "📊 Analytics & Logs",
-        "🗄️ Database Viewer"
-    ])
-    st.markdown('<div class="laser-line"></div>', unsafe_allow_html=True)
-    df_all = load_pokemon()
-    st.markdown(f"**Pokémon Loaded:** {len(df_all)}")
+    
+    with stat_cols[1]:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, rgba(78, 205, 196, 0.1), rgba(78, 205, 196, 0.05)); border: 1px solid rgba(78, 205, 196, 0.3); border-radius: 10px; padding: 8px; text-align: center; min-height: 70px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <p style="color: #4ECDC4; font-size: 1.3rem; font-weight: 900; margin: 0;">{len(ALLOWED_REGIONS)}</p>
+            <p style="color: #a5b4fc; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; margin: 2px 0 0 0;">Regions</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <p style="color: #a5b4fc; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; margin: 10px 0 6px 0;">🗺️ Region Breakdown</p>
+    """, unsafe_allow_html=True)
+    
+    region_colors = {
+        "Hoenn": {"color": "#52b788", "emoji": "🌿"},
+        "Sinnoh": {"color": "#dda0dd", "emoji": "⛰️"},
+        "Galar": {"color": "#f08080", "emoji": "⚡"}
+    }
+    
     for r in ALLOWED_REGIONS:
         cnt = len(df_all[df_all["native_region"]==r])
-        st.markdown(f"- {r}: **{cnt}**")
-    st.markdown('<hr style="border:0;height:2px;background:linear-gradient(to right,rgba(59,76,202,0),#FFCB05,#3b4cca,rgba(59,76,202,0));margin:12px 0;">', unsafe_allow_html=True)
-    st.markdown("**Section:** 3ISA")
-    st.markdown("**Regions:** Hoenn, Sinnoh, Galar")
-    st.markdown("**Data Source:** PokéAPI (Pre-Cached)")
+        region_info = region_colors.get(r, {"color": "#a5b4fc", "emoji": "📍"})
+        st.markdown(f"""
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 3px 6px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+            <span style="color: #cbd5e1; font-size: 0.7rem; font-weight: 600;">{region_info['emoji']} {r}</span>
+            <span style="background: {region_info['color']}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 700;">{cnt}</span>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="laser-line" style="margin-top: 12px; margin-bottom: 12px;"></div>', unsafe_allow_html=True)
+    
+    # System Status
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05)); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 10px; padding: 10px;">
+        <p style="color: #22c55e; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; margin: 0 0 8px 0;">✅ System Status</p>
+        <div style="font-size: 0.65rem; color: #cbd5e1; line-height: 1.8;">
+            <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                <span style="color: #22c55e; margin-right: 6px;">●</span>
+                <span>Database: <b style="color: #22c55e;">Connected</b></span>
+            </div>
+            <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                <span style="color: #22c55e; margin-right: 6px;">●</span>
+                <span>PokéAPI: <b style="color: #22c55e;">Active</b></span>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <span style="color: #22c55e; margin-right: 6px;">●</span>
+                <span>Image Cache: <b style="color: #22c55e;">Ready</b></span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="laser-line" style="margin-top: 12px; margin-bottom: 12px;"></div>', unsafe_allow_html=True)
+    
+    # Footer
+    st.markdown("""
+    <div style="text-align: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(59, 76, 202, 0.3);">
+        <p style="color: #a5b4fc; font-size: 0.65rem; margin: 0; line-height: 1.3;">
+            Powered by PokéAPI & Streamlit
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────
+#  PAGE ROUTING
+# ─────────────────────────────────────────
+current_page = st.session_state.get("current_page", "team_engine")
 
 # ─────────────────────────────────────────
 #  PAGE 1: TEAM ENGINE
 # ─────────────────────────────────────────
-if page == "🏟️ Team Engine":
+if current_page == "team_engine":
     st.header("🏟️ Team Engine — Gym Leader Team Generator")
     st.markdown("Generates a 6-Pokémon Gym Leader defending team using only **native-region** Pokémon.")
 
@@ -941,6 +1081,9 @@ if page == "🏟️ Team Engine":
             if removed > 0:
                 st.info(f"🔒 **Restriction filter applied:** {removed} restricted Pokémon were excluded from the {region} pool.")
 
+            # Preload images for better performance
+            preload_team_images(team)
+            
             # Display team as Pokémon cards
             st.subheader("🏟️ Team Grid View")
             cols = st.columns(3)
@@ -949,8 +1092,19 @@ if page == "🏟️ Team Engine":
                 primary_type = row["type_1"]
                 type_color = TYPE_COLORS.get(primary_type, "#3b4cca")
                 t2_html = f'<span class="badge badge-type-{row["type_2"].lower()}" style="margin-left: 5px;">{row["type_2"]}</span>' if row["type_2"] else ''
+                
+                # Get Pokemon image HTML - handle both 'id' and missing id gracefully
+                pokemon_id = row.get("id") if "id" in row else None
+                if pokemon_id is not None:
+                    image_html = get_pokemon_image_html(int(pokemon_id), row["name"], size="medium")
+                else:
+                    image_html = '<div style="width: 100px; height: 100px; background: rgba(59, 76, 202, 0.3); border: 2px dashed #3b4cca; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #a5b4fc; font-size: 0.8rem;">No Image</div>'
+                
                 col.markdown(f"""
                 <div class="pokemon-glow-card" style="background: rgba(21, 27, 61, 0.7); border: 1px solid {type_color}40; border-top: 5px solid {type_color}; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 0 10px {type_color}15; text-align: center; --glow-color: {type_color};">
+                    <div style="margin-bottom: 10px; display: flex; justify-content: center;">
+                        {image_html}
+                    </div>
                     <h4 style="color: #FFCB05; margin: 0; font-family: 'Orbitron', sans-serif; font-size: 1.3rem;">{row['name']}</h4>
                     <p style="margin: 5px 0 10px; font-size: 0.8rem; color: #a5b4fc; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">{row['role']}</p>
                     <div style="margin-bottom: 10px;">
@@ -1037,7 +1191,7 @@ if page == "🏟️ Team Engine":
 # ─────────────────────────────────────────
 #  PAGE 2: CHALLENGER SELECTION ENGINE
 # ─────────────────────────────────────────
-elif page == "⚔️ Challenger Selection":
+elif current_page == "challenger":
     st.header("⚔️ Challenger Selection Engine")
     st.markdown("Generates the best 6-Pokémon challenger lineup to counter a Gym Leader's team.")
     st.info(f"**3ISA Allowed Challenger Regions:** Hoenn, Sinnoh, Galar")
@@ -1106,14 +1260,26 @@ elif page == "⚔️ Challenger Selection":
 
             # Display challenger team as cards
             st.subheader("⚔️ Recommended Counter Lineup")
+            preload_team_images(result)
             cols = st.columns(3)
             for idx, row in result.reset_index(drop=True).iterrows():
                 col = cols[idx % 3]
                 primary_type = row["type_1"]
                 type_color = TYPE_COLORS.get(primary_type, "#3b4cca")
                 t2_html = f'<span class="badge badge-type-{row["type_2"].lower()}" style="margin-left: 5px;">{row["type_2"]}</span>' if row["type_2"] else ''
+                
+                # Get Pokemon image HTML - handle both 'id' and missing id gracefully
+                pokemon_id = row.get("id") if "id" in row else None
+                if pokemon_id is not None:
+                    image_html = get_pokemon_image_html(int(pokemon_id), row["name"], size="medium")
+                else:
+                    image_html = '<div style="width: 100px; height: 100px; background: rgba(59, 76, 202, 0.3); border: 2px dashed #3b4cca; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #a5b4fc; font-size: 0.8rem;">No Image</div>'
+                
                 col.markdown(f"""
                 <div class="pokemon-glow-card" style="background: rgba(21, 27, 61, 0.75); border: 1px solid {type_color}40; border-top: 5px solid {type_color}; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 0 10px {type_color}15; text-align: center; --glow-color: {type_color};">
+                    <div style="margin-bottom: 10px; display: flex; justify-content: center;">
+                        {image_html}
+                    </div>
                     <h4 style="color: #FFCB05; margin: 0; font-family: 'Orbitron', sans-serif; font-size: 1.3rem;">{row['name']}</h4>
                     <p style="margin: 5px 0 10px; font-size: 0.8rem; color: #a5b4fc; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">{row['role']}</p>
                     <div style="margin-bottom: 10px;">
@@ -1181,7 +1347,7 @@ elif page == "⚔️ Challenger Selection":
 # ─────────────────────────────────────────
 #  PAGE 3: BATTLE PREDICTION ENGINE
 # ─────────────────────────────────────────
-elif page == "🔮 Battle Prediction":
+elif current_page == "prediction":
     st.header("🔮 Battle Prediction Engine")
     st.markdown("Predict the winner **before** the battle starts, then record the actual result.")
 
@@ -1362,7 +1528,7 @@ elif page == "🔮 Battle Prediction":
 # ─────────────────────────────────────────
 #  PAGE 4: ANALYTICS
 # ─────────────────────────────────────────
-elif page == "📊 Analytics & Logs":
+elif current_page == "analytics":
     st.header("📊 Analytics, Metrics & Logs")
 
     # Summary metrics
@@ -1463,7 +1629,7 @@ elif page == "📊 Analytics & Logs":
 # ─────────────────────────────────────────
 #  PAGE 5: DATABASE VIEWER
 # ─────────────────────────────────────────
-elif page == "🗄️ Database Viewer":
+elif current_page == "database":
     st.header("🗄️ Database Viewer")
 
     conn = sqlite3.connect(DB_PATH)
