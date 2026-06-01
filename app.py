@@ -127,6 +127,63 @@ def load_pokemon():
     df["total"] = df[["hp","attack","defense","special_attack","special_defense","speed"]].sum(axis=1)
     return df
 
+def preload_session_state_from_db():
+    if "db_preloaded" in st.session_state:
+        return
+    
+    df_all = load_pokemon()
+    
+    # 1. Load last gym team
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""SELECT gym_leader, region, type_specialization, generated_team 
+                     FROM team_outputs 
+                     ORDER BY timestamp DESC LIMIT 1""")
+        row = c.fetchone()
+        if row:
+            gym_leader, region, type_spec, gen_team_str = row
+            try:
+                names = json.loads(gen_team_str)
+                gym_rows = []
+                for name in names:
+                    match = df_all[df_all["name"].str.lower() == name.lower()]
+                    if len(match) > 0:
+                        gym_rows.append(match.iloc[0])
+                if gym_rows:
+                    st.session_state["last_gym_team"] = pd.DataFrame(gym_rows)
+                    st.session_state["last_gym_leader"] = gym_leader
+                    st.session_state["last_gym_region"] = region
+                    st.session_state["last_gym_type"] = type_spec
+            except Exception:
+                pass
+        
+        # 2. Load last challenger team
+        c.execute("""SELECT target_gym_leader, challenger_region, recommended_team 
+                     FROM challenger_outputs 
+                     ORDER BY timestamp DESC LIMIT 1""")
+        row_chal = c.fetchone()
+        if row_chal:
+            gym_leader_name, chal_region, rec_team_str = row_chal
+            try:
+                names = json.loads(rec_team_str)
+                chal_rows = []
+                for name in names:
+                    match = df_all[df_all["name"].str.lower() == name.lower()]
+                    if len(match) > 0:
+                        chal_rows.append(match.iloc[0])
+                if chal_rows:
+                    st.session_state["last_chal_team"] = pd.DataFrame(chal_rows)
+                    st.session_state["last_chal_name"] = "Challenger"
+                    st.session_state["last_chal_region"] = chal_region
+            except Exception:
+                pass
+        conn.close()
+    except Exception:
+        pass
+        
+    st.session_state["db_preloaded"] = True
+
 def apply_battle_restrictions(df):
     """Remove all restricted Pokemon (Legendary, Mythical, Paradox)."""
     filtered = df[df["is_restricted"] == False].copy()
@@ -639,6 +696,7 @@ st.markdown("""
 #  INIT
 # ─────────────────────────────────────────
 init_db()
+preload_session_state_from_db()
 
 # ─────────────────────────────────────────
 #  HEADER
@@ -840,10 +898,12 @@ elif page == "⚔️ Challenger Selection":
 
     col1, col2 = st.columns(2)
     with col1:
-        challenger_name = st.text_input("Challenger Name / Group", placeholder="e.g. Group A")
-        challenger_region = st.selectbox("Challenger Region (3ISA)", ALLOWED_REGIONS)
+        challenger_name = st.text_input("Challenger Name / Group", value=st.session_state.get("last_chal_name",""), placeholder="e.g. Group A")
+        chal_reg_val = st.session_state.get("last_chal_region", ALLOWED_REGIONS[0])
+        chal_reg_idx = ALLOWED_REGIONS.index(chal_reg_val) if chal_reg_val in ALLOWED_REGIONS else 0
+        challenger_region = st.selectbox("Challenger Region (3ISA)", ALLOWED_REGIONS, index=chal_reg_idx)
     with col2:
-        gym_leader_name = st.text_input("Target Gym Leader Name", placeholder="e.g. Brawly")
+        gym_leader_name = st.text_input("Target Gym Leader Name", value=st.session_state.get("last_gym_leader",""), placeholder="e.g. Brawly")
 
     st.subheader("Gym Leader Team Input")
     use_previous = False
@@ -854,8 +914,11 @@ elif page == "⚔️ Challenger Selection":
         gym_team = st.session_state["last_gym_team"]
         st.dataframe(gym_team[["name","native_region","type_1","type_2","total"]].reset_index(drop=True), use_container_width=True)
     else:
+        default_gym_input = ""
+        if "last_gym_team" in st.session_state:
+            default_gym_input = "\n".join(st.session_state["last_gym_team"]["name"].tolist())
         st.markdown("**Enter Gym Leader Pokémon (one per line):**")
-        gym_input = st.text_area("Gym Team (names only)", placeholder="Flygon\nSalamence\nGarchomp\nAltaria\nVibrava\nDragonite", height=150)
+        gym_input = st.text_area("Gym Team (names only)", value=default_gym_input, placeholder="Flygon\nSalamence\nGarchomp\nAltaria\nVibrava\nDragonite", height=150)
         df_all = load_pokemon()
         gym_rows = []
         if gym_input:
@@ -983,11 +1046,15 @@ elif page == "🔮 Battle Prediction":
         with col1:
             match_id = st.text_input("Match ID", value=f"MATCH-{datetime.now().strftime('%m%d-%H%M')}")
             gym_leader_pred = st.text_input("Gym Leader Name", value=st.session_state.get("last_gym_leader",""))
-            gym_region_pred = st.selectbox("Gym Leader Region", ALLOWED_REGIONS, key="gym_reg_pred")
+            gym_reg_val = st.session_state.get("last_gym_region", ALLOWED_REGIONS[0])
+            gym_reg_idx = ALLOWED_REGIONS.index(gym_reg_val) if gym_reg_val in ALLOWED_REGIONS else 0
+            gym_region_pred = st.selectbox("Gym Leader Region", ALLOWED_REGIONS, index=gym_reg_idx, key="gym_reg_pred")
             gym_type_pred = st.text_input("Gym Leader Type", value=st.session_state.get("last_gym_type",""))
         with col2:
             challenger_pred = st.text_input("Challenger Name", value=st.session_state.get("last_chal_name",""))
-            chal_region_pred = st.selectbox("Challenger Region", ALLOWED_REGIONS, key="chal_reg_pred")
+            chal_reg_val = st.session_state.get("last_chal_region", ALLOWED_REGIONS[0])
+            chal_reg_idx = ALLOWED_REGIONS.index(chal_reg_val) if chal_reg_val in ALLOWED_REGIONS else 0
+            chal_region_pred = st.selectbox("Challenger Region", ALLOWED_REGIONS, index=chal_reg_idx, key="chal_reg_pred")
 
         # Team inputs
         col_g, col_c = st.columns(2)
@@ -1002,7 +1069,10 @@ elif page == "🔮 Battle Prediction":
                 gym_team_pred = st.session_state["last_gym_team"]
                 st.dataframe(gym_team_pred[["name","type_1","type_2","total"]].reset_index(drop=True), use_container_width=True)
             else:
-                gym_input2 = st.text_area("Gym Team", placeholder="Flygon\nSalamence", key="gym_input_pred")
+                default_gym_pred = ""
+                if "last_gym_team" in st.session_state:
+                    default_gym_pred = "\n".join(st.session_state["last_gym_team"]["name"].tolist())
+                gym_input2 = st.text_area("Gym Team", value=default_gym_pred, placeholder="Flygon\nSalamence", key="gym_input_pred")
                 gym_rows2 = []
                 if gym_input2:
                     for name in gym_input2.strip().split("\n"):
@@ -1019,7 +1089,10 @@ elif page == "🔮 Battle Prediction":
                 chal_team_pred = st.session_state["last_chal_team"]
                 st.dataframe(chal_team_pred[["name","type_1","type_2","total"]].reset_index(drop=True), use_container_width=True)
             else:
-                chal_input2 = st.text_area("Challenger Team", placeholder="Garchomp\nLucario", key="chal_input_pred")
+                default_chal_pred = ""
+                if "last_chal_team" in st.session_state:
+                    default_chal_pred = "\n".join(st.session_state["last_chal_team"]["name"].tolist())
+                chal_input2 = st.text_area("Challenger Team", value=default_chal_pred, placeholder="Garchomp\nLucario", key="chal_input_pred")
                 chal_rows2 = []
                 if chal_input2:
                     for name in chal_input2.strip().split("\n"):
