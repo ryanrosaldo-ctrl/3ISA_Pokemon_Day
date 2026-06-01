@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 3ISA_Pokemon_Day/
+pokemon_day.db
+*.db
