@@ -781,6 +781,12 @@ if page == "🏟️ Team Engine":
                 showdown_text += f"EVs: 252 HP / 252 Atk / 4 Spe\n\n"
             st.code(showdown_text, language="text")
 
+            # CSV export
+            st.subheader("⬇️ Download Team CSV")
+            team_csv_cols = ["name", "type_1", "type_2", "native_region", "hp", "attack", "defense", "special_attack", "special_defense", "speed"]
+            team_csv = team[team_csv_cols].to_csv(index=False)
+            st.download_button("⬇️ Download Team CSV", team_csv, f"team_{gym_leader_name or 'gym'}.csv", "text/csv")
+
             # Save to DB
             conn = sqlite3.connect(DB_PATH)
             conn.execute("""INSERT INTO team_outputs
@@ -883,6 +889,12 @@ elif page == "⚔️ Challenger Selection":
                 showdown_text += f"{row['name']}\n"
                 showdown_text += f"EVs: 252 Atk / 4 Def / 252 Spe\n\n"
             st.code(showdown_text, language="text")
+
+            # CSV export
+            st.subheader("⬇️ Download Challenger Team CSV")
+            chal_csv_cols = ["name", "type_1", "type_2", "native_region", "hp", "attack", "defense", "special_attack", "special_defense", "speed"]
+            chal_csv = result[chal_csv_cols].to_csv(index=False)
+            st.download_button("⬇️ Download Challenger Team CSV", chal_csv, f"challenger_{challenger_name or 'team'}.csv", "text/csv")
 
             # Save
             conn = sqlite3.connect(DB_PATH)
@@ -1216,7 +1228,8 @@ elif page == "🗄️ Database Viewer":
             filtered = filtered[(filtered["type_1"].isin(type_filter)) | (filtered["type_2"].isin(type_filter))]
         st.write(f"Showing {len(filtered)} Pokémon")
         st.dataframe(filtered.reset_index(drop=True), use_container_width=True)
-        csv = filtered.to_csv(index=False)
+        export_cols = ['name', 'type_1', 'type_2', 'native_region', 'generation', 'hp', 'attack', 'defense', 'special_attack', 'special_defense', 'speed']
+        csv = filtered[export_cols].to_csv(index=False)
         st.download_button("⬇️ Download Filtered Data", csv, "pokemon_filtered.csv", "text/csv")
 
     conn.close()
