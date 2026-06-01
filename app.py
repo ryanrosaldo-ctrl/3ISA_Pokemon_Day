@@ -48,6 +48,14 @@ TYPE_CHART = {
     "Fairy":     {"Fire":-1,"Poison":-1,"Steel":-1,"Fighting":1,"Dragon":1,"Dark":1},
 }
 
+TYPE_COLORS = {
+    "Normal": "#a8a77a", "Fire": "#ee8130", "Water": "#6390f0", "Electric": "#f7d02c",
+    "Grass": "#7ac74c", "Ice": "#96d9d6", "Fighting": "#c22e28", "Poison": "#a33ea1",
+    "Ground": "#e2bf65", "Flying": "#a98ff3", "Psychic": "#f95587", "Bug": "#a6b91a",
+    "Rock": "#b6a136", "Ghost": "#735797", "Dragon": "#6f35fc", "Dark": "#705746",
+    "Steel": "#b7b7ce", "Fairy": "#d685ad"
+}
+
 def get_effectiveness(atk_type, def_types):
     """Returns multiplier: 2=super, 0.5=not very, 0=immune"""
     mult = 1.0
@@ -689,6 +697,133 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(255, 203, 5, 0.5) !important;
         transform: scale(1.01) !important;
     }
+
+    /* Deep cyber-arena background glow */
+    [data-testid="stAppViewContainer"] {
+        background: radial-gradient(circle at 50% 30%, #151b3d 0%, #070913 100%) !important;
+        background-attachment: fixed !important;
+    }
+    
+    /* Dynamic type glow card styles */
+    .pokemon-glow-card {
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    }
+    .pokemon-glow-card:hover {
+        transform: translateY(-5px) scale(1.02) !important;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 20px var(--glow-color, rgba(255, 203, 5, 0.4)) !important;
+        background: rgba(26, 32, 74, 0.85) !important;
+    }
+
+    /* Laser Line Divider */
+    .laser-line {
+        height: 2px;
+        background: linear-gradient(to right, rgba(59,76,202,0) 0%, #FFCB05 50%, rgba(59,76,202,0) 100%);
+        margin: 20px 0;
+        box-shadow: 0 0 8px #FFCB05;
+        animation: pulse-laser 2s infinite alternate;
+    }
+    @keyframes pulse-laser {
+        0% { opacity: 0.6; box-shadow: 0 0 4px #FFCB05; }
+        100% { opacity: 1.0; box-shadow: 0 0 12px #FFCB05; }
+    }
+
+    /* 18 Pokémon type badges */
+    .badge-type-normal   { background: linear-gradient(135deg, #a8a77a, #c6c6a7) !important; color: #ffffff !important; border: 1px solid #a8a77a !important; }
+    .badge-type-fire     { background: linear-gradient(135deg, #ee8130, #f5ac78) !important; color: #ffffff !important; border: 1px solid #ee8130 !important; }
+    .badge-type-water    { background: linear-gradient(135deg, #6390f0, #9db7f5) !important; color: #ffffff !important; border: 1px solid #6390f0 !important; }
+    .badge-type-electric { background: linear-gradient(135deg, #f7d02c, #fae078) !important; color: #1d2c5e !important; border: 1px solid #f7d02c !important; }
+    .badge-type-grass    { background: linear-gradient(135deg, #7ac74c, #a7db8d) !important; color: #ffffff !important; border: 1px solid #7ac74c !important; }
+    .badge-type-ice      { background: linear-gradient(135deg, #96d9d6, #bce6e6) !important; color: #1d2c5e !important; border: 1px solid #96d9d6 !important; }
+    .badge-type-fighting { background: linear-gradient(135deg, #c22e28, #d67873) !important; color: #ffffff !important; border: 1px solid #c22e28 !important; }
+    .badge-type-poison   { background: linear-gradient(135deg, #a33ea1, #c183c1) !important; color: #ffffff !important; border: 1px solid #a33ea1 !important; }
+    .badge-type-ground   { background: linear-gradient(135deg, #e2bf65, #ebd69d) !important; color: #1d2c5e !important; border: 1px solid #e2bf65 !important; }
+    .badge-type-flying   { background: linear-gradient(135deg, #a98ff3, #c6b7f5) !important; color: #ffffff !important; border: 1px solid #a98ff3 !important; }
+    .badge-type-psychic  { background: linear-gradient(135deg, #f95587, #fa92b2) !important; color: #ffffff !important; border: 1px solid #f95587 !important; }
+    .badge-type-bug      { background: linear-gradient(135deg, #a6b91a, #c1d15a) !important; color: #ffffff !important; border: 1px solid #a6b91a !important; }
+    .badge-type-rock     { background: linear-gradient(135deg, #b6a136, #d1c17d) !important; color: #ffffff !important; border: 1px solid #b6a136 !important; }
+    .badge-type-ghost    { background: linear-gradient(135deg, #735797, #a292bc) !important; color: #ffffff !important; border: 1px solid #735797 !important; }
+    .badge-type-dragon   { background: linear-gradient(135deg, #6f35fc, #a17ffd) !important; color: #ffffff !important; border: 1px solid #6f35fc !important; }
+    .badge-type-dark     { background: linear-gradient(135deg, #705746, #907c6f) !important; color: #ffffff !important; border: 1px solid #705746 !important; }
+    .badge-type-steel    { background: linear-gradient(135deg, #b7b7ce, #d1d1e0) !important; color: #1d2c5e !important; border: 1px solid #b7b7ce !important; }
+    .badge-type-fairy    { background: linear-gradient(135deg, #d685ad, #e3b5cd) !important; color: #ffffff !important; border: 1px solid #d685ad !important; }
+
+    /* Enforce light text globally inside the app container, except for inputs and selectbox options */
+    [data-testid="stAppViewContainer"] p, 
+    [data-testid="stAppViewContainer"] span, 
+    [data-testid="stAppViewContainer"] li, 
+    [data-testid="stAppViewContainer"] ul, 
+    [data-testid="stAppViewContainer"] ol {
+        color: #cbd5e1 !important;
+    }
+
+    [data-testid="stAppViewContainer"] h1, 
+    [data-testid="stAppViewContainer"] h2, 
+    [data-testid="stAppViewContainer"] h3 {
+        color: #ffffff !important;
+    }
+    
+    [data-testid="stAppViewContainer"] h4, 
+    [data-testid="stAppViewContainer"] h5, 
+    [data-testid="stAppViewContainer"] h6 {
+        color: #FFCB05 !important;
+        font-family: 'Orbitron', sans-serif !important;
+    }
+
+    /* Enforce light text for labels and selectbox headers */
+    [data-testid="stWidgetLabel"] p, .stWidgetForm label {
+        color: #FFCB05 !important;
+        font-weight: 700 !important;
+        font-family: 'Rajdhani', sans-serif !important;
+        font-size: 1.15rem !important;
+        letter-spacing: 0.5px !important;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    }
+    
+    /* Tabs styling to make selected and unselected headers bright and readable */
+    button[data-baseweb="tab"] p {
+        color: #a5b4fc !important;
+        font-weight: 700 !important;
+        font-family: 'Rajdhani', sans-serif !important;
+        font-size: 1.1rem !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] p {
+        color: #FFCB05 !important;
+        text-shadow: 0 0 5px rgba(255, 203, 5, 0.4) !important;
+    }
+    
+    /* Accordion / Expander header text styling */
+    [data-baseweb="accordion"] p, [data-baseweb="accordion"] span {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Checkbox & Radio labels text readability */
+    [data-testid="stCheckbox"] label span, [data-testid="stRadio"] label span {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+
+    /* Enforce light color for notification/alert text */
+    [data-testid="stNotification"] p {
+        color: #ffffff !important;
+        font-weight: 500 !important;
+    }
+
+    /* Enforce dark text inside the light sidebar for legibility */
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] span, 
+    [data-testid="stSidebar"] li, 
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+        color: #111638 !important;
+        text-shadow: none !important;
+    }
+    
+    [data-testid="stSidebar"] h2 {
+        color: #ffcb05 !important;
+        text-shadow: 2px 2px #3b4cca !important;
+        font-family: 'Orbitron', sans-serif !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -715,6 +850,7 @@ st.markdown("""
     <h1>POKÉMON DAY II — 3ISA ENGINE</h1>
     <p>Team Engine · Challenger Selection Engine · Battle Prediction Engine</p>
     <p style="opacity:0.65;font-size:0.85rem;margin-top:6px;letter-spacing:0.5px;">Sections: Hoenn · Sinnoh · Galar | Data Source: PokéAPI (Cached)</p>
+    <div style="background: rgba(255, 203, 5, 0.15); border: 1px solid #FFCB05; border-radius: 20px; display: inline-block; padding: 6px 18px; margin-top: 10px; font-family: 'Orbitron', sans-serif; font-size: 0.9rem; color: #ffcb05; font-weight: 700; letter-spacing: 1px; box-shadow: 0 0 10px rgba(255, 203, 5, 0.2);">🛡️ OFFICIAL HOST: AHDADDEE GYM 🛡️</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -735,10 +871,10 @@ with st.sidebar:
                 <circle cx="50" cy="50" r="6" fill="#1d2c5e" stroke-width="0"/>
             </svg>
             <h2 style='color:#ffcb05;text-shadow: 2px 2px #3b4cca;font-family:sans-serif;margin-top:10px;margin-bottom:0px;font-size:1.5rem;'>POKÉMON DAY II</h2>
-            <p style='font-size:0.8rem;color:#a5b4fc;margin-top:2px;font-weight:700;text-transform:uppercase;'>3ISA System</p>
+            <p style='font-size:0.8rem;color:#a5b4fc;margin-top:2px;font-weight:700;text-transform:uppercase;'>3ISA System · Ahdaddee Gym</p>
         </div>
         """, unsafe_allow_html=True)
-    st.markdown('<hr style="border:0;height:2px;background:linear-gradient(to right,rgba(59,76,202,0),#FFCB05,#3b4cca,rgba(59,76,202,0));margin:12px 0;">', unsafe_allow_html=True)
+    st.markdown('<div class="laser-line"></div>', unsafe_allow_html=True)
     page = st.radio("Navigation", [
         "🏟️ Team Engine",
         "⚔️ Challenger Selection",
@@ -746,7 +882,7 @@ with st.sidebar:
         "📊 Analytics & Logs",
         "🗄️ Database Viewer"
     ])
-    st.markdown('<hr style="border:0;height:2px;background:linear-gradient(to right,rgba(59,76,202,0),#FFCB05,#3b4cca,rgba(59,76,202,0));margin:12px 0;">', unsafe_allow_html=True)
+    st.markdown('<div class="laser-line"></div>', unsafe_allow_html=True)
     df_all = load_pokemon()
     st.markdown(f"**Pokémon Loaded:** {len(df_all)}")
     for r in ALLOWED_REGIONS:
@@ -771,7 +907,7 @@ if page == "🏟️ Team Engine":
         all_types = sorted(load_pokemon()["type_1"].unique().tolist())
         type_spec = st.selectbox("Type Specialization", all_types)
     with col3:
-        gym_leader_name = st.text_input("Gym Leader Name", placeholder="e.g. Brawly")
+        gym_leader_name = st.text_input("Gym Leader Name", value="Ahdaddee Gym", placeholder="e.g. Ahdaddee Gym")
 
     model_choice = st.selectbox("Model / Logic", ["KNN + Rule-Based Scoring", "Random Forest Scoring", "Rule-Based Only"])
 
@@ -803,13 +939,16 @@ if page == "🏟️ Team Engine":
             cols = st.columns(3)
             for idx, row in team.reset_index(drop=True).iterrows():
                 col = cols[idx % 3]
-                t2_html = f'<span class="badge badge-{row["native_region"].lower()}" style="margin-left: 5px;">{row["type_2"]}</span>' if row["type_2"] else ''
+                primary_type = row["type_1"]
+                type_color = TYPE_COLORS.get(primary_type, "#3b4cca")
+                t2_html = f'<span class="badge badge-type-{row["type_2"].lower()}" style="margin-left: 5px;">{row["type_2"]}</span>' if row["type_2"] else ''
                 col.markdown(f"""
-                <div style="background: rgba(21, 27, 61, 0.7); border: 1px solid rgba(59, 76, 202, 0.5); border-top: 5px solid #FF1C1C; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: center;">
+                <div class="pokemon-glow-card" style="background: rgba(21, 27, 61, 0.7); border: 1px solid {type_color}40; border-top: 5px solid {type_color}; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 0 10px {type_color}15; text-align: center; --glow-color: {type_color};">
                     <h4 style="color: #FFCB05; margin: 0; font-family: 'Orbitron', sans-serif; font-size: 1.3rem;">{row['name']}</h4>
                     <p style="margin: 5px 0 10px; font-size: 0.8rem; color: #a5b4fc; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">{row['role']}</p>
                     <div style="margin-bottom: 10px;">
-                        <span class="badge badge-{row["native_region"].lower()}">{row["type_1"]}</span>{t2_html}
+                        <span class="badge badge-{row['native_region'].lower()}">{row['native_region']}</span>
+                        <span class="badge badge-type-{row['type_1'].lower()}">{row['type_1']}</span>{t2_html}
                     </div>
                     <div style="font-size: 0.85rem; text-align: left; background: rgba(8, 10, 24, 0.4); padding: 8px; border-radius: 8px; color: #cbd5e1; border: 1px solid rgba(59, 76, 202, 0.2);">
                         <div style="display: flex; justify-content: space-between;"><span>HP: <b>{row['hp']}</b></span><span>ATK: <b>{row['attack']}</b></span></div>
@@ -903,7 +1042,7 @@ elif page == "⚔️ Challenger Selection":
         chal_reg_idx = ALLOWED_REGIONS.index(chal_reg_val) if chal_reg_val in ALLOWED_REGIONS else 0
         challenger_region = st.selectbox("Challenger Region (3ISA)", ALLOWED_REGIONS, index=chal_reg_idx)
     with col2:
-        gym_leader_name = st.text_input("Target Gym Leader Name", value=st.session_state.get("last_gym_leader",""), placeholder="e.g. Brawly")
+        gym_leader_name = st.text_input("Target Gym Leader Name", value=st.session_state.get("last_gym_leader","Ahdaddee Gym"), placeholder="e.g. Ahdaddee Gym")
 
     st.subheader("Gym Leader Team Input")
     use_previous = False
@@ -963,13 +1102,16 @@ elif page == "⚔️ Challenger Selection":
             cols = st.columns(3)
             for idx, row in result.reset_index(drop=True).iterrows():
                 col = cols[idx % 3]
-                t2_html = f'<span class="badge badge-{row["native_region"].lower()}" style="margin-left: 5px;">{row["type_2"]}</span>' if row["type_2"] else ''
+                primary_type = row["type_1"]
+                type_color = TYPE_COLORS.get(primary_type, "#3b4cca")
+                t2_html = f'<span class="badge badge-type-{row["type_2"].lower()}" style="margin-left: 5px;">{row["type_2"]}</span>' if row["type_2"] else ''
                 col.markdown(f"""
-                <div style="background: rgba(21, 27, 61, 0.7); border: 1px solid rgba(59, 76, 202, 0.5); border-top: 5px solid #FFCB05; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: center;">
+                <div class="pokemon-glow-card" style="background: rgba(21, 27, 61, 0.75); border: 1px solid {type_color}40; border-top: 5px solid {type_color}; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 0 10px {type_color}15; text-align: center; --glow-color: {type_color};">
                     <h4 style="color: #FFCB05; margin: 0; font-family: 'Orbitron', sans-serif; font-size: 1.3rem;">{row['name']}</h4>
                     <p style="margin: 5px 0 10px; font-size: 0.8rem; color: #a5b4fc; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">{row['role']}</p>
                     <div style="margin-bottom: 10px;">
-                        <span class="badge badge-{row["native_region"].lower()}">{row["type_1"]}</span>{t2_html}
+                        <span class="badge badge-{row['native_region'].lower()}">{row['native_region']}</span>
+                        <span class="badge badge-type-{row['type_1'].lower()}">{row['type_1']}</span>{t2_html}
                     </div>
                     <div style="font-size: 0.85rem; text-align: left; background: rgba(8, 10, 24, 0.4); padding: 8px; border-radius: 8px; color: #cbd5e1; border: 1px solid rgba(59, 76, 202, 0.2); margin-bottom: 10px;">
                         <div style="display: flex; justify-content: space-between;"><span>HP: <b>{row['hp']}</b></span><span>ATK: <b>{row['attack']}</b></span></div>
@@ -1045,7 +1187,7 @@ elif page == "🔮 Battle Prediction":
         col1, col2 = st.columns(2)
         with col1:
             match_id = st.text_input("Match ID", value=f"MATCH-{datetime.now().strftime('%m%d-%H%M')}")
-            gym_leader_pred = st.text_input("Gym Leader Name", value=st.session_state.get("last_gym_leader",""))
+            gym_leader_pred = st.text_input("Gym Leader Name", value=st.session_state.get("last_gym_leader","Ahdaddee Gym"))
             gym_reg_val = st.session_state.get("last_gym_region", ALLOWED_REGIONS[0])
             gym_reg_idx = ALLOWED_REGIONS.index(gym_reg_val) if gym_reg_val in ALLOWED_REGIONS else 0
             gym_region_pred = st.selectbox("Gym Leader Region", ALLOWED_REGIONS, index=gym_reg_idx, key="gym_reg_pred")
