@@ -28,7 +28,7 @@ st.set_page_config(
 )
 
 SECTION = "3ISA"
-ALLOWED_REGIONS = ["Hoenn", "Sinnoh", "Galar"]
+ALLOWED_REGIONS = ["Kanto", "Johto", "Hoenn", "Sinnoh", "Unova", "Kalos", "Alola", "Galar", "Paldea"]
 
 TYPE_CHART = {
     "Normal":    {"Rock":-1,"Ghost":-2,"Steel":-1},
@@ -661,9 +661,15 @@ st.markdown("""
         text-transform: uppercase; letter-spacing: 0.5px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
+    .badge-kanto  { background: linear-gradient(135deg, #b71c1c, #d32f2f); color: #ffcdd2; border: 1px solid #ef5350; }
+    .badge-johto  { background: linear-gradient(135deg, #880e4f, #ad1457); color: #f8bbd0; border: 1px solid #ec407a; }
     .badge-hoenn  { background: linear-gradient(135deg, #1b4d3e, #2d6a2d); color: #90ee90; border: 1px solid #52b788; }
     .badge-sinnoh { background: linear-gradient(135deg, #3d348b, #4a2d6a); color: #dda0dd; border: 1px solid #dda0dd; }
+    .badge-unova  { background: linear-gradient(135deg, #4a148c, #6a1b9a); color: #e1bee7; border: 1px solid #7e57c2; }
+    .badge-kalos  { background: linear-gradient(135deg, #0d47a1, #1565c0); color: #bbdefb; border: 1px solid #42a5f5; }
+    .badge-alola  { background: linear-gradient(135deg, #e65100, #f57c00); color: #ffe0b2; border: 1px solid #ffa726; }
     .badge-galar  { background: linear-gradient(135deg, #780000, #6a2d2d); color: #f08080; border: 1px solid #c1121f; }
+    .badge-paldea { background: linear-gradient(135deg, #004d40, #00695c); color: #b2dfdb; border: 1px solid #26a69a; }
 
     /* Match winner display */
     .winner-box {
@@ -840,6 +846,10 @@ st.markdown("""
 # ─────────────────────────────────────────
 #  INIT
 # ─────────────────────────────────────────
+if "cache_cleared" not in st.session_state:
+    st.cache_data.clear()
+    st.session_state["cache_cleared"] = True
+
 init_db()
 preload_session_state_from_db()
 
@@ -986,9 +996,15 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     region_colors = {
+        "Kanto": {"color": "#ef5350", "emoji": "🌋"},
+        "Johto": {"color": "#ec407a", "emoji": "🌸"},
         "Hoenn": {"color": "#52b788", "emoji": "🌿"},
         "Sinnoh": {"color": "#dda0dd", "emoji": "⛰️"},
-        "Galar": {"color": "#f08080", "emoji": "⚡"}
+        "Unova": {"color": "#7e57c2", "emoji": "🏙️"},
+        "Kalos": {"color": "#42a5f5", "emoji": "🗼"},
+        "Alola": {"color": "#ffa726", "emoji": "🌴"},
+        "Galar": {"color": "#f08080", "emoji": "⚡"},
+        "Paldea": {"color": "#26a69a", "emoji": "🍇"}
     }
     
     for r in ALLOWED_REGIONS:
@@ -1035,6 +1051,128 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
+def process_and_display_gym_team(team, gym_leader_name, region, type_spec, model_used):
+    # Validation check
+    issues = validate_team(team, region)
+    if issues:
+        for issue in issues:
+            st.error(issue)
+    else:
+        st.success("✅ Validation passed — all Pokémon are native to region and unrestricted.")
+
+    # Restriction filter info
+    df_raw = load_pokemon()
+    _, removed = apply_battle_restrictions(df_raw[df_raw["native_region"]==region])
+    if removed > 0:
+        st.info(f"🔒 **Restriction filter applied:** {removed} restricted Pokémon were excluded from the {region} pool.")
+
+    # Preload images for better performance
+    preload_team_images(team)
+    
+    # Display team as Pokémon cards
+    st.subheader("🏟️ Team Grid View")
+    cols = st.columns(3)
+    for idx, row in team.reset_index(drop=True).iterrows():
+        col = cols[idx % 3]
+        primary_type = row["type_1"]
+        type_color = TYPE_COLORS.get(primary_type, "#3b4cca")
+        t2_html = f'<span class="badge badge-type-{row["type_2"].lower()}" style="margin-left: 5px;">{row["type_2"]}</span>' if row["type_2"] else ''
+        
+        # Get Pokemon image HTML - handle both 'id' and missing id gracefully
+        pokemon_id = row.get("id") if "id" in row else None
+        if pokemon_id is not None:
+            image_html = get_pokemon_image_html(int(pokemon_id), row["name"], size="medium")
+        else:
+            image_html = '<div style="width: 100px; height: 100px; background: rgba(59, 76, 202, 0.3); border: 2px dashed #3b4cca; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #a5b4fc; font-size: 0.8rem;">No Image</div>'
+        
+        col.markdown(f"""
+        <div class="pokemon-glow-card" style="background: rgba(21, 27, 61, 0.7); border: 1px solid {type_color}40; border-top: 5px solid {type_color}; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 0 10px {type_color}15; text-align: center; --glow-color: {type_color};">
+            <div style="margin-bottom: 10px; display: flex; justify-content: center;">
+                {image_html}
+            </div>
+            <h4 style="color: #FFCB05; margin: 0; font-family: 'Orbitron', sans-serif; font-size: 1.3rem;">{row['name']}</h4>
+            <p style="margin: 5px 0 10px; font-size: 0.8rem; color: #a5b4fc; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">{row['role']}</p>
+            <div style="margin-bottom: 10px;">
+                <span class="badge badge-{row['native_region'].lower()}">{row['native_region']}</span>
+                <span class="badge badge-type-{row['type_1'].lower()}">{row['type_1']}</span>{t2_html}
+            </div>
+            <div style="font-size: 0.85rem; text-align: left; background: rgba(8, 10, 24, 0.4); padding: 8px; border-radius: 8px; color: #cbd5e1; border: 1px solid rgba(59, 76, 202, 0.2);">
+                <div style="display: flex; justify-content: space-between;"><span>HP: <b>{row['hp']}</b></span><span>ATK: <b>{row['attack']}</b></span></div>
+                <div style="display: flex; justify-content: space-between;"><span>DEF: <b>{row['defense']}</b></span><span>SPA: <b>{row['special_attack']}</b></span></div>
+                <div style="display: flex; justify-content: space-between;"><span>SPD: <b>{row['special_defense']}</b></span><span>SPE: <b>{row['speed']}</b></span></div>
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; font-weight: bold; color: #FFCB05; display: flex; justify-content: space-between;">
+                    <span>BST:</span><span>{row['total']}</span>
+                </div>
+            </div>
+            <p style="font-size: 0.75rem; color: #94a3b8; font-style: italic; margin-top: 8px; margin-bottom: 0px; text-align: left; line-height: 1.2;">{row['reason']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with st.expander("📊 View Raw Data Table"):
+        display_cols = ["name","native_region","type_1","type_2","role","hp","attack","defense","special_attack","special_defense","speed","total","reason"]
+        st.dataframe(team[display_cols].reset_index(drop=True), use_container_width=True)
+
+    # Radar chart
+    st.subheader("📊 Team Stat Profile")
+    fig = go.Figure()
+    stat_cols = ["hp","attack","defense","special_attack","special_defense","speed"]
+    for _, row in team.iterrows():
+        fig.add_trace(go.Scatterpolar(
+            r=[row[s] for s in stat_cols],
+            theta=["HP","ATK","DEF","SPA","SPD","SPE"],
+            fill='toself', name=row["name"], opacity=0.6
+        ))
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0,200])),
+                      showlegend=True, height=450,
+                      paper_bgcolor="#0d1117", font=dict(color="white"))
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Type distribution
+    types_list = team["type_1"].tolist() + [t for t in team["type_2"].tolist() if t]
+    type_counts = pd.Series(types_list).value_counts().reset_index()
+    type_counts.columns = ["Type","Count"]
+    fig2 = px.bar(type_counts, x="Type", y="Count", title="Type Distribution in Team",
+                  color="Count", color_continuous_scale="blues")
+    fig2.update_layout(paper_bgcolor="#0d1117", font=dict(color="white"), plot_bgcolor="#0d1117")
+    st.plotly_chart(fig2, use_container_width=True)
+
+    # Showdown export
+    st.subheader("📋 Pokémon Showdown Format")
+    showdown_text = ""
+    for _, row in team.iterrows():
+        showdown_text += f"{row['name']}\n"
+        if row["type_2"]:
+            showdown_text += f"- Type: {row['type_1']}/{row['type_2']}\n"
+        else:
+            showdown_text += f"- Type: {row['type_1']}\n"
+        showdown_text += f"EVs: 252 HP / 252 Atk / 4 Spe\n\n"
+    st.code(showdown_text, language="text")
+
+    # CSV export
+    st.subheader("⬇️ Download Team CSV")
+    team_csv_cols = ["name", "type_1", "type_2", "native_region", "hp", "attack", "defense", "special_attack", "special_defense", "speed"]
+    team_csv = team[team_csv_cols].to_csv(index=False)
+    st.download_button("⬇️ Download Team CSV", team_csv, f"team_{gym_leader_name or 'gym'}.csv", "text/csv")
+
+    # Save to DB
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""INSERT INTO team_outputs
+        (section,gym_leader,region,type_specialization,generated_team,model_used,metric_used,timestamp)
+        VALUES (?,?,?,?,?,?,?,?)""",
+        (SECTION, gym_leader_name or "Unknown", region, type_spec,
+         json.dumps(team["name"].tolist()), model_used, "Role Balance Score",
+         datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+    log_audit("GENERATE_TEAM", f"{gym_leader_name}_{region}_{type_spec}", "", json.dumps(team["name"].tolist()))
+
+    # Store in session for challenger engine
+    st.session_state["last_gym_team"] = team
+    st.session_state["last_gym_leader"] = gym_leader_name or "Gym Leader"
+    st.session_state["last_gym_region"] = region
+    st.session_state["last_gym_type"] = type_spec
+    st.info("✅ Team saved to database. Head to **Challenger Selection** to generate a counter team.")
+
 # ─────────────────────────────────────────
 #  PAGE ROUTING
 # ─────────────────────────────────────────
@@ -1045,148 +1183,74 @@ current_page = st.session_state.get("current_page", "team_engine")
 # ─────────────────────────────────────────
 if current_page == "team_engine":
     st.header("🏟️ Team Engine — Gym Leader Team Generator")
-    st.markdown("Generates a 6-Pokémon Gym Leader defending team using only **native-region** Pokémon.")
+    st.markdown("Generates or imports a 6-Pokémon Gym Leader defending team using only **native-region** Pokémon.")
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        region = st.selectbox("Gym Leader Region", ALLOWED_REGIONS)
-    with col2:
-        all_types = sorted(load_pokemon()["type_1"].unique().tolist())
-        type_spec = st.selectbox("Type Specialization", all_types)
-    with col3:
-        gym_leader_name = st.text_input("Gym Leader Name", value="Ahdaddee Gym", placeholder="e.g. Ahdaddee Gym")
+    team_source = st.radio("Select Team Source", ["⚡ Generate via AI/Model", "📥 Import via CSV File"], horizontal=True)
 
-    model_choice = st.selectbox("Model / Logic", ["KNN + Rule-Based Scoring", "Random Forest Scoring", "Rule-Based Only"])
+    if team_source == "⚡ Generate via AI/Model":
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            region = st.selectbox("Gym Leader Region", ALLOWED_REGIONS)
+        with col2:
+            all_types = sorted(load_pokemon()["type_1"].unique().tolist())
+            type_spec = st.selectbox("Type Specialization", all_types)
+        with col3:
+            gym_leader_name = st.text_input("Gym Leader Name", value="Ahdaddee Gym", placeholder="e.g. Ahdaddee Gym")
 
-    if st.button("⚡ Generate Gym Leader Team", type="primary"):
-        with st.spinner("Generating team..."):
-            team = run_team_engine(region, type_spec, model_choice)
+        model_choice = st.selectbox("Model / Logic", ["KNN + Rule-Based Scoring", "Random Forest Scoring", "Rule-Based Only"])
 
-        if len(team) == 0:
-            st.error("Not enough Pokémon found for this region/type combination.")
-        else:
-            st.success(f"✅ Generated {len(team)} Pokémon for **{gym_leader_name or 'Gym Leader'}** ({region} / {type_spec})")
+        if st.button("⚡ Generate Gym Leader Team", type="primary"):
+            with st.spinner("Generating team..."):
+                team = run_team_engine(region, type_spec, model_choice)
 
-            # Validation check
-            issues = validate_team(team, region)
-            if issues:
-                for issue in issues:
-                    st.error(issue)
+            if len(team) == 0:
+                st.error("Not enough Pokémon found for this region/type combination.")
             else:
-                st.success("✅ Validation passed — all Pokémon are native to region and unrestricted.")
+                st.success(f"✅ Generated {len(team)} Pokémon for **{gym_leader_name or 'Gym Leader'}** ({region} / {type_spec})")
+                process_and_display_gym_team(team, gym_leader_name, region, type_spec, model_choice)
+    else:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            region = st.selectbox("Gym Leader Region", ALLOWED_REGIONS, key="import_region")
+        with col2:
+            all_types = sorted(load_pokemon()["type_1"].unique().tolist())
+            type_spec = st.selectbox("Type Specialization", all_types, key="import_type")
+        with col3:
+            gym_leader_name = st.text_input("Gym Leader Name", value="Ahdaddee Gym", placeholder="e.g. Ahdaddee Gym", key="import_leader_name")
 
-            # Restriction filter info
-            df_raw = load_pokemon()
-            _, removed = apply_battle_restrictions(df_raw[df_raw["native_region"]==region])
-            if removed > 0:
-                st.info(f"🔒 **Restriction filter applied:** {removed} restricted Pokémon were excluded from the {region} pool.")
-
-            # Preload images for better performance
-            preload_team_images(team)
-            
-            # Display team as Pokémon cards
-            st.subheader("🏟️ Team Grid View")
-            cols = st.columns(3)
-            for idx, row in team.reset_index(drop=True).iterrows():
-                col = cols[idx % 3]
-                primary_type = row["type_1"]
-                type_color = TYPE_COLORS.get(primary_type, "#3b4cca")
-                t2_html = f'<span class="badge badge-type-{row["type_2"].lower()}" style="margin-left: 5px;">{row["type_2"]}</span>' if row["type_2"] else ''
-                
-                # Get Pokemon image HTML - handle both 'id' and missing id gracefully
-                pokemon_id = row.get("id") if "id" in row else None
-                if pokemon_id is not None:
-                    image_html = get_pokemon_image_html(int(pokemon_id), row["name"], size="medium")
+        uploaded_file = st.file_uploader("Upload Gym Team CSV File", type=["csv"])
+        if uploaded_file is not None:
+            try:
+                imported_df = pd.read_csv(uploaded_file)
+                if "name" not in imported_df.columns:
+                    st.error("CSV must contain a 'name' column.")
                 else:
-                    image_html = '<div style="width: 100px; height: 100px; background: rgba(59, 76, 202, 0.3); border: 2px dashed #3b4cca; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #a5b4fc; font-size: 0.8rem;">No Image</div>'
-                
-                col.markdown(f"""
-                <div class="pokemon-glow-card" style="background: rgba(21, 27, 61, 0.7); border: 1px solid {type_color}40; border-top: 5px solid {type_color}; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 0 10px {type_color}15; text-align: center; --glow-color: {type_color};">
-                    <div style="margin-bottom: 10px; display: flex; justify-content: center;">
-                        {image_html}
-                    </div>
-                    <h4 style="color: #FFCB05; margin: 0; font-family: 'Orbitron', sans-serif; font-size: 1.3rem;">{row['name']}</h4>
-                    <p style="margin: 5px 0 10px; font-size: 0.8rem; color: #a5b4fc; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">{row['role']}</p>
-                    <div style="margin-bottom: 10px;">
-                        <span class="badge badge-{row['native_region'].lower()}">{row['native_region']}</span>
-                        <span class="badge badge-type-{row['type_1'].lower()}">{row['type_1']}</span>{t2_html}
-                    </div>
-                    <div style="font-size: 0.85rem; text-align: left; background: rgba(8, 10, 24, 0.4); padding: 8px; border-radius: 8px; color: #cbd5e1; border: 1px solid rgba(59, 76, 202, 0.2);">
-                        <div style="display: flex; justify-content: space-between;"><span>HP: <b>{row['hp']}</b></span><span>ATK: <b>{row['attack']}</b></span></div>
-                        <div style="display: flex; justify-content: space-between;"><span>DEF: <b>{row['defense']}</b></span><span>SPA: <b>{row['special_attack']}</b></span></div>
-                        <div style="display: flex; justify-content: space-between;"><span>SPD: <b>{row['special_defense']}</b></span><span>SPE: <b>{row['speed']}</b></span></div>
-                        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; font-weight: bold; color: #FFCB05; display: flex; justify-content: space-between;">
-                            <span>BST:</span><span>{row['total']}</span>
-                        </div>
-                    </div>
-                    <p style="font-size: 0.75rem; color: #94a3b8; font-style: italic; margin-top: 8px; margin-bottom: 0px; text-align: left; line-height: 1.2;">{row['reason']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with st.expander("📊 View Raw Data Table"):
-                display_cols = ["name","native_region","type_1","type_2","role","hp","attack","defense","special_attack","special_defense","speed","total","reason"]
-                st.dataframe(team[display_cols].reset_index(drop=True), use_container_width=True)
-
-            # Radar chart
-            st.subheader("📊 Team Stat Profile")
-            fig = go.Figure()
-            stat_cols = ["hp","attack","defense","special_attack","special_defense","speed"]
-            for _, row in team.iterrows():
-                fig.add_trace(go.Scatterpolar(
-                    r=[row[s] for s in stat_cols],
-                    theta=["HP","ATK","DEF","SPA","SPD","SPE"],
-                    fill='toself', name=row["name"], opacity=0.6
-                ))
-            fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0,200])),
-                              showlegend=True, height=450,
-                              paper_bgcolor="#0d1117", font=dict(color="white"))
-            st.plotly_chart(fig, use_container_width=True)
-
-            # Type distribution
-            types_list = team["type_1"].tolist() + [t for t in team["type_2"].tolist() if t]
-            type_counts = pd.Series(types_list).value_counts().reset_index()
-            type_counts.columns = ["Type","Count"]
-            fig2 = px.bar(type_counts, x="Type", y="Count", title="Type Distribution in Team",
-                          color="Count", color_continuous_scale="blues")
-            fig2.update_layout(paper_bgcolor="#0d1117", font=dict(color="white"), plot_bgcolor="#0d1117")
-            st.plotly_chart(fig2, use_container_width=True)
-
-            # Showdown export
-            st.subheader("📋 Pokémon Showdown Format")
-            showdown_text = ""
-            for _, row in team.iterrows():
-                showdown_text += f"{row['name']}\n"
-                if row["type_2"]:
-                    showdown_text += f"- Type: {row['type_1']}/{row['type_2']}\n"
-                else:
-                    showdown_text += f"- Type: {row['type_1']}\n"
-                showdown_text += f"EVs: 252 HP / 252 Atk / 4 Spe\n\n"
-            st.code(showdown_text, language="text")
-
-            # CSV export
-            st.subheader("⬇️ Download Team CSV")
-            team_csv_cols = ["name", "type_1", "type_2", "native_region", "hp", "attack", "defense", "special_attack", "special_defense", "speed"]
-            team_csv = team[team_csv_cols].to_csv(index=False)
-            st.download_button("⬇️ Download Team CSV", team_csv, f"team_{gym_leader_name or 'gym'}.csv", "text/csv")
-
-            # Save to DB
-            conn = sqlite3.connect(DB_PATH)
-            conn.execute("""INSERT INTO team_outputs
-                (section,gym_leader,region,type_specialization,generated_team,model_used,metric_used,timestamp)
-                VALUES (?,?,?,?,?,?,?,?)""",
-                (SECTION, gym_leader_name or "Unknown", region, type_spec,
-                 json.dumps(team["name"].tolist()), model_choice, "Role Balance Score",
-                 datetime.now().isoformat()))
-            conn.commit()
-            conn.close()
-            log_audit("GENERATE_TEAM", f"{gym_leader_name}_{region}_{type_spec}", "", json.dumps(team["name"].tolist()))
-
-            # Store in session for challenger engine
-            st.session_state["last_gym_team"] = team
-            st.session_state["last_gym_leader"] = gym_leader_name or "Gym Leader"
-            st.session_state["last_gym_region"] = region
-            st.session_state["last_gym_type"] = type_spec
-            st.info("✅ Team saved to database. Head to **Challenger Selection** to generate a counter team.")
+                    df_all = load_pokemon()
+                    gym_rows = []
+                    for name in imported_df["name"].tolist():
+                        match = df_all[df_all["name"].str.lower() == str(name).strip().lower()]
+                        if len(match) > 0:
+                            gym_rows.append(match.iloc[0])
+                        else:
+                            st.warning(f"'{name}' not found in database")
+                    
+                    if gym_rows:
+                        imported_team = pd.DataFrame(gym_rows)
+                        if "role" not in imported_team.columns:
+                            imported_team["role"] = "Sweeper/Tank"
+                        else:
+                            imported_team["role"] = imported_team["role"].fillna("Sweeper/Tank")
+                        if "reason" not in imported_team.columns:
+                            imported_team["reason"] = "Imported via CSV configuration"
+                        else:
+                            imported_team["reason"] = imported_team["reason"].fillna("Imported via CSV configuration")
+                        
+                        st.info(f"Loaded {len(imported_team)} Pokémon from CSV.")
+                        
+                        if st.button("🚀 Load & Validate Imported Team", type="primary"):
+                            process_and_display_gym_team(imported_team, gym_leader_name, region, type_spec, "CSV Import")
+            except Exception as e:
+                st.error(f"Error reading CSV: {e}")
 
 # ─────────────────────────────────────────
 #  PAGE 2: CHALLENGER SELECTION ENGINE
@@ -1194,7 +1258,7 @@ if current_page == "team_engine":
 elif current_page == "challenger":
     st.header("⚔️ Challenger Selection Engine")
     st.markdown("Generates the best 6-Pokémon challenger lineup to counter a Gym Leader's team.")
-    st.info(f"**3ISA Allowed Challenger Regions:** Hoenn, Sinnoh, Galar")
+    st.info(f"**3ISA Allowed Challenger Regions:** {', '.join(ALLOWED_REGIONS)}")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -1604,7 +1668,11 @@ elif current_page == "analytics":
     with col1:
         fig = px.histogram(df, x="total", color="native_region",
                            title="BST Distribution by Region", nbins=20,
-                           color_discrete_map={"Hoenn":"#4caf50","Sinnoh":"#9c27b0","Galar":"#f44336"})
+                           color_discrete_map={
+                               "Kanto":"#ef5350", "Johto":"#ec407a", "Hoenn":"#52b788", 
+                               "Sinnoh":"#dda0dd", "Unova":"#7e57c2", "Kalos":"#42a5f5", 
+                               "Alola":"#ffa726", "Galar":"#f08080", "Paldea":"#26a69a"
+                           })
         fig.update_layout(paper_bgcolor="#0d1117", font=dict(color="white"), plot_bgcolor="#0d1117")
         st.plotly_chart(fig, use_container_width=True)
     with col2:
