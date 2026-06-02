@@ -207,7 +207,7 @@ def validate_team(team_df, region):
     for _, row in team_df.iterrows():
         if row.get("is_restricted", False):
             issues.append(f"⛔ {row['name']} is RESTRICTED (Legendary/Mythical/Paradox)")
-        if row.get("native_region","") != region:
+        if region != "All" and row.get("native_region","") != region:
             issues.append(f"⛔ {row['name']} is NOT native to {region} (native: {row.get('native_region','')})")
     return issues
 
@@ -218,7 +218,10 @@ def run_team_engine(region, type_spec, model="KNN + Rule-Based Scoring"):
     df = load_pokemon()
     # Apply battle restriction filter first
     df, _ = apply_battle_restrictions(df)
-    pool = df[df["native_region"] == region].copy()
+    if region == "All":
+        pool = df.copy()
+    else:
+        pool = df[df["native_region"] == region].copy()
 
     # Type filter: at least one type matches specialization
     typed = pool[(pool["type_1"] == type_spec) | (pool["type_2"] == type_spec)].copy()
@@ -1190,7 +1193,7 @@ if current_page == "team_engine":
     if team_source == "⚡ Generate via AI/Model":
         col1, col2, col3 = st.columns(3)
         with col1:
-            region = st.selectbox("Gym Leader Region", ALLOWED_REGIONS)
+            region = st.selectbox("Gym Leader Region", ["All"] + ALLOWED_REGIONS)
         with col2:
             all_types = sorted(load_pokemon()["type_1"].unique().tolist())
             type_spec = st.selectbox("Type Specialization", all_types)
@@ -1211,7 +1214,7 @@ if current_page == "team_engine":
     else:
         col1, col2, col3 = st.columns(3)
         with col1:
-            region = st.selectbox("Gym Leader Region", ALLOWED_REGIONS, key="import_region")
+            region = st.selectbox("Gym Leader Region", ["All"] + ALLOWED_REGIONS, key="import_region")
         with col2:
             all_types = sorted(load_pokemon()["type_1"].unique().tolist())
             type_spec = st.selectbox("Type Specialization", all_types, key="import_type")
@@ -1421,23 +1424,124 @@ elif current_page == "prediction":
         st.subheader("Pre-Battle Prediction")
         st.warning("⚠️ Prediction MUST be recorded BEFORE the battle starts!")
 
+        df_all = load_pokemon()
+        all_types = sorted(df_all["type_1"].unique().tolist())
+
+        # Define callbacks for loading saved teams
+        def on_gym_leader_change():
+            sel = st.session_state["selected_gym_leader_pred"]
+            if sel != "New Gym Leader...":
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute("SELECT region, type_specialization, generated_team FROM team_outputs WHERE gym_leader = ? ORDER BY timestamp DESC LIMIT 1", (sel,))
+                row = c.fetchone()
+                conn.close()
+                if row:
+                    region, type_spec, gen_team_str = row
+                    try:
+                        names = json.loads(gen_team_str)
+                        gym_rows = []
+                        for name in names:
+                            match = df_all[df_all["name"].str.lower() == name.lower()]
+                            if len(match) > 0:
+                                gym_rows.append(match.iloc[0])
+                        if gym_rows:
+                            st.session_state["last_gym_team"] = pd.DataFrame(gym_rows)
+                            st.session_state["last_gym_leader"] = sel
+                            st.session_state["last_gym_region"] = region
+                            st.session_state["last_gym_type"] = type_spec
+                            # Update widget state keys directly
+                            st.session_state["gym_reg_pred"] = region
+                            st.session_state["gym_type_pred"] = type_spec
+                    except Exception:
+                        pass
+
+        def on_challenger_change():
+            sel = st.session_state["selected_challenger_pred"]
+            if sel != "New Challenger...":
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute("SELECT challenger_region, challenger_team FROM predictions WHERE challenger = ? ORDER BY timestamp_before DESC LIMIT 1", (sel,))
+                row = c.fetchone()
+                conn.close()
+                if row:
+                    chal_region, chal_team_str = row
+                    try:
+                        names = json.loads(chal_team_str)
+                        chal_rows = []
+                        for name in names:
+                            match = df_all[df_all["name"].str.lower() == name.lower()]
+                            if len(match) > 0:
+                                chal_rows.append(match.iloc[0])
+                        if chal_rows:
+                            st.session_state["last_chal_team"] = pd.DataFrame(chal_rows)
+                            st.session_state["last_chal_name"] = sel
+                            st.session_state["last_chal_region"] = chal_region
+                            # Update widget state key directly
+                            st.session_state["chal_reg_pred"] = chal_region
+                    except Exception:
+                        pass
+
+        # Query distinct Gym Leaders and Challengers
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT DISTINCT gym_leader FROM team_outputs ORDER BY gym_leader ASC")
+        db_gym_leaders = [r[0] for r in c.fetchall() if r[0]]
+        
+        c.execute("SELECT DISTINCT challenger FROM predictions WHERE challenger IS NOT NULL AND challenger != '' ORDER BY challenger ASC")
+        db_challengers = [r[0] for r in c.fetchall() if r[0]]
+        conn.close()
+
         col1, col2 = st.columns(2)
         with col1:
             match_id = st.text_input("Match ID", value=f"MATCH-{datetime.now().strftime('%m%d-%H%M')}")
-            gym_leader_pred = st.text_input("Gym Leader Name", value=st.session_state.get("last_gym_leader","Ahdaddee Gym"))
-            gym_reg_val = st.session_state.get("last_gym_region", ALLOWED_REGIONS[0])
-            gym_reg_idx = ALLOWED_REGIONS.index(gym_reg_val) if gym_reg_val in ALLOWED_REGIONS else 0
-            gym_region_pred = st.selectbox("Gym Leader Region", ALLOWED_REGIONS, index=gym_reg_idx, key="gym_reg_pred")
-            gym_type_pred = st.text_input("Gym Leader Type", value=st.session_state.get("last_gym_type",""))
+            
+            gym_leaders_opts = ["New Gym Leader..."] + db_gym_leaders
+            default_leader = st.session_state.get("last_gym_leader", "Ahdaddee Gym")
+            try:
+                default_leader_idx = gym_leaders_opts.index(default_leader)
+            except ValueError:
+                default_leader_idx = 0
+            selected_gym_leader = st.selectbox("Select Gym Leader", gym_leaders_opts, index=default_leader_idx, key="selected_gym_leader_pred", on_change=on_gym_leader_change)
+            
+            if selected_gym_leader == "New Gym Leader...":
+                gym_leader_pred = st.text_input("Gym Leader Name", value=st.session_state.get("last_gym_leader", "Ahdaddee Gym"), key="custom_gym_leader")
+                st.session_state["last_gym_leader"] = gym_leader_pred
+            else:
+                gym_leader_pred = selected_gym_leader
+                st.markdown(f"**Gym Leader Name:** `{gym_leader_pred}`")
+                
+            gym_reg_val = st.session_state.get("last_gym_region", "All")
+            gym_reg_list = ["All"] + ALLOWED_REGIONS
+            gym_reg_idx = gym_reg_list.index(gym_reg_val) if gym_reg_val in gym_reg_list else 0
+            gym_region_pred = st.selectbox("Gym Leader Region", gym_reg_list, index=gym_reg_idx, key="gym_reg_pred")
+            
+            gym_type_val = st.session_state.get("last_gym_type", "Fire")
+            gym_type_idx = all_types.index(gym_type_val) if gym_type_val in all_types else 0
+            gym_type_pred = st.selectbox("Gym Leader Type", all_types, index=gym_type_idx, key="gym_type_pred")
+            
         with col2:
-            challenger_pred = st.text_input("Challenger Name", value=st.session_state.get("last_chal_name",""))
+            challengers_opts = ["New Challenger..."] + db_challengers
+            default_chal = st.session_state.get("last_chal_name", "")
+            try:
+                default_chal_idx = challengers_opts.index(default_chal)
+            except ValueError:
+                default_chal_idx = 0
+            selected_challenger = st.selectbox("Select Challenger", challengers_opts, index=default_chal_idx, key="selected_challenger_pred", on_change=on_challenger_change)
+            
+            if selected_challenger == "New Challenger...":
+                challenger_pred = st.text_input("Challenger Name", value=st.session_state.get("last_chal_name", ""), key="custom_challenger")
+                st.session_state["last_chal_name"] = challenger_pred
+            else:
+                challenger_pred = selected_challenger
+                st.markdown(f"**Challenger Name:** `{challenger_pred}`")
+                
             chal_reg_val = st.session_state.get("last_chal_region", ALLOWED_REGIONS[0])
             chal_reg_idx = ALLOWED_REGIONS.index(chal_reg_val) if chal_reg_val in ALLOWED_REGIONS else 0
             chal_region_pred = st.selectbox("Challenger Region", ALLOWED_REGIONS, index=chal_reg_idx, key="chal_reg_pred")
 
         # Team inputs
         col_g, col_c = st.columns(2)
-        df_all = load_pokemon()
 
         with col_g:
             st.subheader("Gym Leader Lineup")
